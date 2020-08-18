@@ -1,16 +1,36 @@
 <?php  
 
-    $conn = mysqli_connect('localhost','ziyan', 'test1234', 'bugbyte projects');
-
-    if(!$conn) {
-        echo 'Connection Error: '.mysqli_connect_error();
-    }
+    require 'dbh.inc.php';
+    session_start();
 
 
-    $sql = 'SELECT * FROM projects';
-    
+    $sql = 'SELECT * FROM  tickets ORDER BY created_at';
+
+    $result = mysqli_query($conn, $sql);
+
+    $tickets = mysqli_fetch_all($result, MYSQLI_ASSOC);
 
 
+
+
+    $projectSQL = 'SELECT id,name,developers FROM projects';
+
+    $projectQuery = mysqli_query($conn, $projectSQL);
+
+    $projectNames = mysqli_fetch_all($projectQuery, MYSQLI_ASSOC);
+
+    $userSQL = 'SELECT username FROM users';
+    $userQuery = mysqli_query($conn, $userSQL);
+
+    $users = mysqli_fetch_all($userQuery, MYSQLI_ASSOC);
+
+
+    mysqli_free_result($projectQuery);
+    mysqli_free_result($result);
+    mysqli_free_result($userQuery);
+
+    mysqli_close($conn);
+  
 
 ?>
 
@@ -40,6 +60,8 @@
   <!-- Custom styles for this template-->
   <link href="css/sb-admin-2.min.css" rel="stylesheet">
  <!-- <link rel="stylesheet" href="css/stylesheet.css"> -->
+
+
   
 
 </head>
@@ -68,7 +90,8 @@
           <li class="nav-item">
             <a class="nav-link" href="index.php">
               <i class="fas fa-fw fa-tachometer-alt"></i>
-              <span>Dashboard</span></a>
+              <span>Dashboard</span>
+            </a>
           </li>
     
           <!-- Divider -->
@@ -104,6 +127,7 @@
     
         </ul>
         <!-- End of Sidebar -->
+
     <!-- Content Wrapper -->
     <div id="content-wrapper" class="d-flex flex-column">
 
@@ -261,10 +285,10 @@
             <div class="topbar-divider d-none d-sm-block"></div>
 
             <!-- Nav Item - User Information -->
-            <li class="nav-item dropdown no-arrow">
+            <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="mr-2 d-none d-lg-inline text-gray-600 small">Valerie Luna</span>
-                <img class="img-profile rounded-circle" src="https://source.unsplash.com/QAB-WJcbgJk/60x60">
+                <span class="mr-2 d-none d-lg-inline text-gray-600 small"><?php echo $_SESSION['firstName'] ." " . $_SESSION['lastName'] ?></span>
+                
               </a>
               <!-- Dropdown - User Information -->
               <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
@@ -299,6 +323,7 @@
           <!-- Page Heading -->
           <div class="d-sm-flex align-items-center justify-content-between mb-4">
             <h1 class="h3 mb-0 text-gray-800">Tickets</h1>
+            
 
             <div class="in h5 mb-0 text-gray-700">
               <label for="ticketSort">Sort By:</label>
@@ -312,25 +337,44 @@
         
             </div>
           </div>
+          <hr>
+          <!-- End Page Heading-->
 
-         
-          <div class="row justify-content-around">
+          
+          <?php 
 
-              <!-- Dropdown Card Example -->
-              <div class="card shadow mb-4 col-md-5">
+            $count = 0;
+          
+            foreach($tickets as $ticket): 
+              if($ticket['status'] != 'Complete' && ($ticket['developer'] == $_SESSION['username'] || $ticket['created_by']==$_SESSION['username'])):
+                if($count % 2 == 0):
+            
+                  echo '<div class="row justify-content-around">';
+
+                endif; 
+          ?>
+
+          <!-- Dropdown Card  -->
+          <div class="card shadow mb-4 col-5">
                 <!-- Card Header - Dropdown -->
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-gradient-light">
-                  <h6 class="m-0 font-weight-bold text-primary">Complete Backend</h6>
+                  <h6 class="m-0 font-weight-bold text-primary"><?php echo htmlspecialchars($ticket['title'])?></h6>
                   <div class="dropdown no-arrow">
                     <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                       <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
                     </a>
                     <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="dropdownMenuLink">
                       <div class="dropdown-header">Choose Action:</div>
-                      <a class="dropdown-item" href="#">Edit</a>
-                      <a class="dropdown-item" href="#">Delete</a>
+                      <a class="dropdown-item" href="editTicket.php?id=<?php echo $ticket['id']?>">Edit</a>
+
+                      <form action="removeTicket.php" method="POST">
+                      <input type="hidden" name="id_to_delete" value = "<?php echo $ticket['id']?>">
+                      <button type ="submit" name="deleteTicket" value="deleteTicket" class="dropdown-item">Delete</button>
                       <div class="dropdown-divider"></div>
-                      <a class="dropdown-item" href="#">Mark as Complete</a>
+
+                      <button type ="submit" name="completeTicket" value="completeTicket" class="dropdown-item">Mark as Complete</button>
+                      </form>
+
                     </div>
                   </div>
                 </div>
@@ -340,13 +384,13 @@
                     <div class="col-sm-4">
                       <span class="font-weight-bold">Project </span>
                       <br>
-                      <span>BugByte</span>
+                      <span><?php echo htmlspecialchars($ticket['project'])?></span>
                     </div>
 
                     <div class="col-sm-4">
                       <span class="font-weight-bold my-2">Priority </span>
                       <br>
-                      <span class="text-danger font-weight-bold">High</span>
+                      <span class="text-danger font-weight-bold"><?php echo htmlspecialchars($ticket['priority'])?></span>
                     
 
                     </div>
@@ -357,13 +401,13 @@
                     <div class="col-sm-4">
                       <span class="font-weight-bold">Type</span>
                       <br>
-                      <span>Project Task</span>
+                      <span><?php echo htmlspecialchars($ticket['type'])?></span>
                     </div>
 
                     <div class="col-sm-5">
                       <span class="font-weight-bold my-2">Assigned Developer </span>
                       <br>
-                      <span>Ziyan Prasla</span>
+                      <span><?php echo htmlspecialchars($ticket['developer'])?></span>
                     
 
                     </div>
@@ -373,114 +417,57 @@
                   <hr class="my-1">
 
                   <div class="row">
-                    <span class="font-weight-bold my-2">Description</span>
-                    <span class="font-weight-light">Insert random description here. It doesn't matter what the length is as the card will keep expanding. We could add a scrollable card later blah blah blah</span>
-                    
+                    <div class="col-sm-12"> 
+                      <span class="font-weight-bold my-2">Description</span>
+                      <br>
+                      <span class="font-weight-light"><?php echo htmlspecialchars($ticket['description'])?></span>
+                    </div>
                   </div>
 
                   <hr class="mt-2">
 
                   <div class="row justify-content-end pb-0">
-                    <small>Date Submitted: </small>
+                    <small>Date Submitted: <?php echo $ticket['created_at']?></small>
+
                   </div>
 
                 </div>
-              </div>
-
-
-              <!-- Dropdown Card Example -->
-              <div class="card shadow mb-4 col-md-5">
-                <!-- Card Header - Dropdown -->
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                  <h6 class="m-0 font-weight-bold text-primary">Ticket Example</h6>
-                  <div class="dropdown no-arrow">
-                    <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                      <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="dropdownMenuLink">
-                      <div class="dropdown-header">Choose Action:</div>
-                      <a class="dropdown-item" href="#">Edit</a>
-                      <a class="dropdown-item" href="#">Delete</a>
-                      <div class="dropdown-divider"></div>
-                      <a class="dropdown-item" href="#">Mark as Complete</a>
-                    </div>
-                  </div>
-                </div>
-                <!-- Card Body -->
-                <div class="card-body">
-                  Dropdown menus can be placed in the card header in order to extend the functionality of a basic card. In this dropdown card example, the Font Awesome vertical ellipsis icon in the card header can be clicked on in order to toggle a dropdown menu.
-                </div>
-              </div>
-
- 
           </div>
 
-          <div class="row justify-content-around">
+              
 
-            <!-- Dropdown Card Example -->
-            <div class="card shadow mb-4 col-md-5">
-              <!-- Card Header - Dropdown -->
-              <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 font-weight-bold text-primary">Ticket Example</h6>
-                <div class="dropdown no-arrow">
-                  <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-                  </a>
-                  <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="dropdownMenuLink">
-                    <div class="dropdown-header">Choose Action:</div>
-                    <a class="dropdown-item" href="#">Edit</a>
-                    <a class="dropdown-item" href="#">Delete</a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="#">Mark as Complete</a>
-                  </div>
-                </div>
-              </div>
-              <!-- Card Body -->
-              <div class="card-body">
-                Dropdown menus can be placed in the card header in order to extend the functionality of a basic card. In this dropdown card example, the Font Awesome vertical ellipsis icon in the card header can be clicked on in order to toggle a dropdown menu.
-              </div>
-            </div>
+          <?php 
+          $count++;
+          
+          
+          if($count%2==0):
 
+              echo '</div>';
+              
 
-            <!-- Dropdown Card Example -->
-            <div class="card shadow mb-4 col-md-5">
-              <!-- Card Header - Dropdown -->
-              <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 font-weight-bold text-primary">Ticket Example</h6>
-                <div class="dropdown no-arrow">
-                  <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-                  </a>
-                  <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="dropdownMenuLink">
-                    <div class="dropdown-header">Choose Action:</div>
-                    <a class="dropdown-item" href="#">Edit</a>
-                    <a class="dropdown-item" href="#">Delete</a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="#">Mark as Complete</a>
-                  </div>
-                </div>
-              </div>
-              <!-- Card Body -->
-              <div class="card-body">
-                Dropdown menus can be placed in the card header in order to extend the functionality of a basic card. In this dropdown card example, the Font Awesome vertical ellipsis icon in the card header can be clicked on in order to toggle a dropdown menu.
-              </div>
-            </div>
+              endif;
+
+               
+              endif;
+              endforeach;
+          
+          ?>
+
 
 
         </div>
 
+        <!-- end of container-fluid -->
 
-        </div>
-
-        <!-- /.container-fluid -->
         <nav class="navbar navbar-dark justify-content-end">
           <button type="button" class="btn btn-outline-info col-2 mx-5"  data-toggle="modal" data-target="#addTicketModal" id="myBtn">Add Ticket</button>
         </nav>
 
 
       </div>
+      
       <!-- End of Main Content -->
-
+      
       <!-- Footer -->
       <footer class="sticky-footer bg-white">
         <div class="container my-auto">
@@ -524,95 +511,110 @@
 
   <!-- Add Ticket Modal -->
   <!-- Modal -->
-<div class="modal fade" id="addTicketModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="exampleModalLongTitle">New Ticket</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        
-        <form method="post">
-          <div class = "container">
-            
-              <!--ROW 1 TITLE AND PROJECT-->
-              <div class = "row justify-content-between mb-3">
+  <div class="modal fade" id="addTicketModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLongTitle">New Ticket</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          
+          <form action="addTicket.php" method="POST">
+            <div class = "container">
+              
+                <!--ROW 1 TITLE AND PROJECT-->
+                <div class = "row justify-content-between mb-3">
 
-                  <div class = "col-sm-6">
-                    <label for="tikTitle">Title:</label>
-                    <input class="form-control" id="tikTitle" type="text">
-                  </div>
-
-                  <div class = "col-sm-6">
-                    <label for="project">Project:</label>
-                    <select class = "form-control" id="project">
-                      <option value="testVal">Test Value</option>
-
-                    </select>
+                    <div class = "col-sm-6">
+                      <label for="title">Title:</label>
+                      <input class="form-control" name="title" id="title" type="text">
                     </div>
-              </div>
-              
-              <!--ROW 2 PRIORITY & DEVELOPER SELECTION-->
-              <div class = "row justify-content-between mb-3">
+
+                    <div class = "col-sm-6">
+                      <label for="project">Project:</label>
+                      <select class = "form-control" name="project" id="project">
+                      
+                        <?php foreach($projectNames as $project): 
+                                $devArray = unserialize($project['developers']);
+                                if(in_array($_SESSION['username'],$devArray)):   
+                          
+                        ?>
+                        <option value="<?php echo $project['name']?>"><?php echo $project['name'] ?></option>
+                        <?php 
+                         endif;
+                         endforeach; 
+                         ?>
 
 
-                  <div class = "col-sm-6">
-                    <label class="mb-0" for="priority">Priority:</label>
-                    <select class = "form-control mb-2" id="priority">
-                      <option value="low">Low</option>
-                      <option value="med">Medium</option>
-                      <option value="high">High</option>
-                      <option value="crit">Critical</option>
-
-                    </select>
-
-                    <label class="mb-0" for="ticketType">Ticket Type:</label>
-                    <select class = "form-control mb-2" id="ticketType">
-                      <option value="bugFix">Bug Fix</option>
-                      <option value="featReq">Feature Request</option>
-                      <option value="task">Project Task</option>
-                      <option value="other">Other</option>
-
-                    </select>
-                    
-                  </div>
-
-                  <div class = "col-sm-6">
-                    <label class="mb-0" for="devs">Assigned Developer: </label>
-                    <select multiple class="form-control" id="devs">
-                      <option>1</option>
-                      <option>2</option>
-                      <option>3</option>
-                      <option>4</option>
-                      <option>5</option>
-                    </select>
-                  </div>
-
-              </div>
-
-              <!--ROW 3 ADDITONAL COMMENTS-->
-              <div class = "row mb-3">
-            
-                <label for="comments">Comments:</label>
-                <textarea class="form-control" id="comments" rows="3"></textarea>
+                      </select>
+                    </div>
+                </div>
                 
+                <!--ROW 2 PRIORITY & DEVELOPER SELECTION-->
+                <div class = "row justify-content-between mb-3">
+
+
+                    <div class = "col-sm-6">
+                      <label class="mb-0" for="priority">Priority:</label>
+                      <select class = "form-control mb-2" name="priority">
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="CRITICAL">Critical</option>
+
+                      </select>
+
+                      <label class="mb-0" for="type">Ticket Type:</label>
+                      <select class = "form-control mb-2" name="type">
+                        <option value="Bug Fix">Bug Fix</option>
+                        <option value="Feature Request">Feature Request</option>
+                        <option value="Project Task">Project Task</option>
+                        <option value="Other">Other</option>
+
+                      </select>
+                      
+                    </div>
+
+                    <div class = "col-sm-6">
+                      <label class="mb-0" for="developer">Assigned Developer: </label>
+                      <select class="form-control mdb-select md-form" name="developer" id="developer" searchable="Search username..">
+                      <?php 
+
+                        foreach($users as $user):
+
+                        echo '<option value="'. $user['username']. '">'. $user['username'] . '</option>';
+
+                        endforeach;
+                      ?>
+                      </select>
+                    </div>
+
+                </div>
+  
+                <!--ROW 3 ADDITONAL COMMENTS-->
+                <div class = "row mb-3">
               
+                  <label for="description">Comments:</label>
+                  <textarea class="form-control" name="description" id="description" rows="3"></textarea>
+                  
+                
 
-              </div>
+                </div>
 
-            
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            <button type="submit" name = "addTicket" class="btn btn-primary" value="addTicket">Add Ticket</button>
-          </div>
-        </form>
+              
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              <button type="submit" name = "addTicket" class="btn btn-primary" value="addTicket">Add Ticket</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   </div>
-</div>
 
   <!-- Bootstrap core JavaScript-->
   <script src="vendor/jquery/jquery.min.js"></script>
@@ -624,7 +626,6 @@
   <!-- Custom scripts for all pages-->
   <script src="js/sb-admin-2.min.js"></script>
 
-  <script src="js/app.js"></script>
 
 </body>
 

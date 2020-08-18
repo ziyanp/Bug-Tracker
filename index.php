@@ -1,13 +1,29 @@
 <?php  
 
-    $conn = mysqli_connect('localhost','ziyan', 'test1234', 'bugbyte projects');
-
-    if(!$conn) {
-        echo 'Connection Error: '.mysqli_connect_error();
-    }
+    require 'dbh.inc.php';
+    session_start();
 
 
-    $sql = 'SELECT * FROM projects';
+    $sql = 'SELECT * FROM tickets ORDER BY created_at';
+
+    $result = mysqli_query($conn, $sql);
+
+    $tickets = mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+    
+    $projectSQL = 'SELECT name, developers,created_at FROM projects ORDER BY created_at';
+
+    $projectQuery = mysqli_query($conn, $projectSQL);
+
+    $projects = mysqli_fetch_all($projectQuery, MYSQLI_ASSOC);
+
+    mysqli_free_result($projectQuery);
+
+
+    mysqli_free_result($result);
+    mysqli_close($conn);
+
+    
     
 
 
@@ -31,14 +47,17 @@
   <meta name="description" content="">
   <meta name="author" content="">
 
-  <title>SB Admin 2 - Dashboard</title>
+  <title>BugByte 2020</title>
 
   <!-- Custom fonts for this template-->
   <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
   <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
 
   <!-- Custom styles for this template-->
+  <link href="css/styles.css" rel="stylesheet">
   <link href="css/sb-admin-2.min.css" rel="stylesheet">
+
+
 
 </head>
 
@@ -259,10 +278,10 @@
             <div class="topbar-divider d-none d-sm-block"></div>
 
             <!-- Nav Item - User Information -->
-            <li class="nav-item dropdown no-arrow">
+            <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="mr-2 d-none d-lg-inline text-gray-600 small">Valerie Luna</span>
-                <img class="img-profile rounded-circle" src="https://source.unsplash.com/QAB-WJcbgJk/60x60">
+                <span class="mr-2 d-none d-lg-inline text-gray-600 small"><?php echo $_SESSION['firstName'] ." " . $_SESSION['lastName'] ?></span>
+                
               </a>
               <!-- Dropdown - User Information -->
               <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
@@ -318,13 +337,7 @@
                     <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                       <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
                     </a>
-                    <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="dropdownMenuLink">
-                      <div class="dropdown-header">Dropdown Header:</div>
-                      <a class="dropdown-item" href="#">Action</a>
-                      <a class="dropdown-item" href="#">Another action</a>
-                      <div class="dropdown-divider"></div>
-                      <a class="dropdown-item" href="#">Something else here</a>
-                    </div>
+
                   </div>
                 </div>
                 <!-- Card Body -->
@@ -332,18 +345,16 @@
                   <div class="chart-pie pt-4 pb-2">
                     <canvas id="myPieChart"></canvas>
                   </div>
+
                   <div class="mt-4 text-center small">
                     <span class="mr-2">
-                      <i class="fas fa-circle text-primary"></i> Low
+                      <i class="fas fa-circle" style="color: #ffff66"></i> Low
                     </span>
                     <span class="mr-2">
-                      <i class="fas fa-circle text-success"></i> Medium
+                      <i class="fas fa-circle" style="color:#ffb366"></i> Medium
                     </span>
                     <span class="mr-2">
-                      <i class="fas fa-circle text-info"></i> High
-                    </span>
-                    <span class="mr-2">
-                      <i class="fas fa-circle text-danger"></i> Critical
+                      <i class="fas fa-circle" style="color: #ff6666"></i> High
                     </span>
                   </div>
                 </div>
@@ -356,15 +367,44 @@
                 <div class="card-header py-3">
                   <h6 class="m-0 font-weight-bold text-primary">Ticket History</h6>
                 </div>
-                <div class = "card-body">
-
-
                   <!-- ADD TICKET HISTORY -->
+                <div class="card-body">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th scope="col" class="font-weight-light">Ticket Name</th>
+                      <th scope="col" class="font-weight-light">Completed on:</th>
 
-              </div>
-              </div>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    
+                      <?php
+                        foreach($tickets as $ticket):
+                          if($ticket['developer'] == $_SESSION['username'] && $ticket['status'] == "Complete"):
 
+                     echo "<tr>";
+                     echo "<td>". $ticket['title'] . "</td>";
+                     echo "<td>" . $ticket['created_at'] . "</td>";
+                     echo "</tr>";
+
+                      
+                          endif;
+                        endforeach;
+                      ?>
+                      
+                    
+                  </tbody>
+                </table>
+
+
+
+                </div>
+                          
+              </div>
             </div>
+
+          
 
           </div>
         
@@ -382,6 +422,37 @@
                 <div class="card-body">
                       
                   <!-- ADD NAMES OF PROJECTS FROM DATABASE-->
+                  <table class="table">
+                  <thead>
+                    <tr>
+                      <th scope="col" class="font-weight-light">Title</th>
+                      <th scope="col" class="font-weight-light">Created at</th>
+
+                      
+
+                    </tr>
+                  </thead>
+                  <tbody>
+                    
+                      <?php
+                        foreach($projects as $project):
+                          $developers = unserialize($project['developers']);
+                          if(in_array($_SESSION['username'], $developers)):
+
+                     echo "<tr>";
+                     echo "<td>". $project['name'] . "</td>";
+                     echo "<td>". $project['created_at'] . "</td>";
+                     
+                     echo "</tr>";
+
+                      
+                          endif;
+                        endforeach;
+                      ?>
+                      
+                    
+                  </tbody>
+                </table>
                  
                 </div>
               </div>
@@ -406,7 +477,7 @@
       <footer class="sticky-footer bg-white">
         <div class="container my-auto">
           <div class="copyright text-center my-auto">
-            <span>Copyright &copy; Your Website 2019</span>
+            <span>Copyright &copy; BugByte 2020</span>
           </div>
         </div>
       </footer>
@@ -436,13 +507,16 @@
         <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
         <div class="modal-footer">
           <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-          <a class="btn btn-primary" href="login.html">Logout</a>
+          <form action="logout.inc.php" method="POST">
+            <button type='submit' class="btn btn-primary" name="logout-submit" value="logout-submit">Logout</button>
+          </form>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Bootstrap core JavaScript-->
+
+      <!-- Bootstrap core JavaScript-->
   <script src="vendor/jquery/jquery.min.js"></script>
   <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 
@@ -454,6 +528,8 @@
 
   <!-- Page level plugins -->
   <script src="vendor/chart.js/Chart.min.js"></script>
+
+  <script type="text/javascript" src="js/app2.js"></script>
 
   <!-- Page level custom scripts -->
   <script src="js/demo/chart-area-demo.js"></script>

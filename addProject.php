@@ -1,5 +1,7 @@
 <?php  
 
+    session_start();
+
     $conn = mysqli_connect('localhost','ziyan', 'test1234', 'bugbyte projects');
 
     if(!$conn) {
@@ -7,7 +9,7 @@
     }
 
 
-    $name = $description = $id='';
+    $name = $description = $id=$developers='';
     $errors = array('name'=>'', 'description'=>'');
 
 
@@ -15,14 +17,15 @@
         
 
       if(empty($_POST['name'])) {
-        $errors['name'] = 'A project name is required <br />';
+        $errors['name'] = 'A project name is required <br />';   // change these errors to appear on the form (red outline?)
         echo 'name error';
 
       }
       else {
         $name = $_POST['name'];
         $description = $_POST['description'];
-        echo 'set';
+        $developers = $_POST['developers'];
+        
 
       }
 
@@ -32,12 +35,18 @@
 
       } else {
 
-        $name = mysqli_real_escape_string($conn, $_POST['name']);
+        $name = mysqli_real_escape_string($conn, $_POST['name']); //realescapestring prevents harmful code being inserted into database
         $description = mysqli_real_escape_string($conn, $_POST['description']);
+
+        $developers = serialize($_POST['developers']);
+       
+        //$developers = mysqli_real_escape_string($array);
+        $created_by = $_SESSION['username'];
+
 
 
         //create sql
-        $sql = "INSERT INTO projects(name, description) VALUES('$name', '$description')";
+        $sql = "INSERT INTO projects(name, description, created_by, developers) VALUES('$name', '$description','$created_by', '$developers')";
 
         //save to database and check
         if(mysqli_query($conn, $sql)) {
@@ -53,5 +62,7 @@
       }
 
     }
+
+    mysqli_close($conn);
 
 ?>

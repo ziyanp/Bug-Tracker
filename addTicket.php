@@ -1,30 +1,15 @@
 <?php  
 
-    $conn = mysqli_connect('localhost','ziyan', 'test1234', 'bugbyte projects');
-
-    if(!$conn) {
-        echo 'Connection Error: '.mysqli_connect_error();
-    }
+require 'dbh.inc.php';
+session_start();
 
 
-    $name = $description = $id='';
-    $errors = array('name'=>'', 'description'=>'');
+    $title = $project = $id= $priority = $type = $developer = $description='';
+    $errors = array('title'=>'', 'description'=>'');
 
 
-    if(isset($_POST['addProject'])){
+    if(isset($_POST['addTicket'])){
         
-
-      if(empty($_POST['name'])) {
-        $errors['name'] = 'A project name is required <br />';
-        echo 'name error';
-
-      }
-      else {
-        $name = $_POST['name'];
-        $description = $_POST['description'];
-        echo 'set';
-
-      }
 
 
       if(array_filter($errors)) {
@@ -32,18 +17,23 @@
 
       } else {
 
-        $name = mysqli_real_escape_string($conn, $_POST['name']);
+        $title = mysqli_real_escape_string($conn, $_POST['title']);
         $description = mysqli_real_escape_string($conn, $_POST['description']);
+        $priority = mysqli_real_escape_string($conn, $_POST['priority']);
+        $project = mysqli_real_escape_string($conn, $_POST['project']);
+        $type = mysqli_real_escape_string($conn, $_POST['type']);
+        $developer = mysqli_real_escape_string($conn, $_POST['developer']);
+        $created_by = $_SESSION['username'];
 
 
         //create sql
-        $sql = "INSERT INTO projects(name, description) VALUES('$name', '$description')";
+        $sql = "INSERT INTO tickets(title,project,priority,type,developer,description,created_by) VALUES('$title','$project','$priority','$type','$developer','$description', '$created_by')";
 
         //save to database and check
         if(mysqli_query($conn, $sql)) {
 
           //success
-          header('Location: projects.php');
+          header('Location: tickets.php');
 
 
         } else {

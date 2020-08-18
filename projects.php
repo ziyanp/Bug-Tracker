@@ -5,15 +5,26 @@
     if(!$conn) {
         echo 'Connection Error: '.mysqli_connect_error();
     }
+    session_start();
 
 
-    $sql = 'SELECT id, name, description FROM projects ORDER BY created_at';
+    $sql = 'SELECT id, name, description, developers FROM projects ORDER BY created_at';
 
     $result = mysqli_query($conn, $sql);
 
     $projects = mysqli_fetch_all($result, MYSQLI_ASSOC);
 
     mysqli_free_result($result);
+
+
+    $userSQL = 'SELECT username FROM users';
+    $userQuery = mysqli_query($conn, $userSQL);
+
+    $users = mysqli_fetch_all($userQuery, MYSQLI_ASSOC);
+
+    mysqli_free_result($userQuery);
+
+
 
     mysqli_close($conn);
     
@@ -38,6 +49,7 @@
   <!-- Custom fonts for this template-->
   <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
   <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/css/bootstrap-select.min.css">
 
   <!-- Custom styles for this template-->
   <link href="css/sb-admin-2.min.css" rel="stylesheet">
@@ -261,10 +273,10 @@
             <div class="topbar-divider d-none d-sm-block"></div>
 
             <!-- Nav Item - User Information -->
-            <li class="nav-item dropdown no-arrow">
+            <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="mr-2 d-none d-lg-inline text-gray-600 small">Ziyan Prasla</span>
-                <img class="img-profile rounded-circle" src="https://source.unsplash.com/QAB-WJcbgJk/60x60">
+                <span class="mr-2 d-none d-lg-inline text-gray-600 small"><?php echo $_SESSION['firstName'] ." " . $_SESSION['lastName'] ?></span>
+                
               </a>
               <!-- Dropdown - User Information -->
               <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
@@ -300,26 +312,79 @@
           <h1 class="h3 mb-2 text-gray-800">Projects</h1>
           <hr>
 
+          <!-- Project Table -->
           <div class="row justify-content-center">
             <table class="table table-bordered">
               <thead class="bg-gradient-dark text-white">
                 <tr>
                   <th style="width: 10%;"scope="col">#</th>
                   <th style="width: 20%;" scope="col">Name</th>
-                  <th scope="col" style="width: 70%;">Description</th>
+                  <th scope="col" style="width: 50%;">Description</th>
+                  <th scope="col" style="width:20%;">Developers</th>
+                  <th scope="col"></th>
                   
                 </tr>
               </thead>
               <tbody>
-                <?php foreach($projects as $project): ?>
+                <?php $i=1; //counter for number of projects?>  
+                <?php foreach($projects as $project):
+                        $devArray = unserialize($project['developers']);
+                        if(in_array($_SESSION['username'],$devArray)):
+                  
+                  ?>
                 <tr>
-                  <th scope="row"><?php echo htmlspecialchars($project['id']); ?></th>
+                  <th scope="row"><?php echo htmlspecialchars($i); ?></th>
                   <td><?php echo htmlspecialchars($project['name']) ?></td>
                   <td><?php echo htmlspecialchars($project['description']) ?></td>
+                  <td>
+                  <ul>
+                    <?php 
+
+                      
+                      foreach($devArray as $dev):
+                        echo "<li>" . $dev ."</li>";
+                    
+                      endforeach;
+                    ?>
+                                
+                  </ul>
+
+                  </td>
+                  <td class="dropdown no-arrow"> 
+                    <a class="dropdown-toggle" href="#" role="button" id="projectMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                      <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                    </a>
+
+                    <div class="dropdown-menu dropdown-menu-left shadow animated--fade-in" aria-labelledby="projectMenuLink">
+                      <div class="dropdown-header">Choose Action:</div>
+
+                    <!--  edit button -->
+
+                        <a class="dropdown-item" href="editProject.php?id=<?php echo $project['id']?>">Edit</a>
+                     
+
+
+                      <!--Form for delete button -->
+                      <form action="deleteProject.php" method="POST">
+
+                        <input type="hidden" name="id_to_delete" value = "<?php echo $project['id']?>">
+                        <button type ="submit" name="deleteProject" value="deleteProject" class="dropdown-item">Remove</button>
+
+                      </form>
+                   
+                    </div>
+                  </td>
+
+
                 </tr>
-                <?php endforeach; ?>
+                <?php $i++; 
+                endif;
+               endforeach; ?>
               </tbody>
             </table>
+
+ 
+
           </div>
 
         </div>
@@ -336,7 +401,7 @@
       <footer class="sticky-footer bg-white">
         <div class="container my-auto">
           <div class="copyright text-center my-auto">
-            <span>Copyright &copy; Your Website 2019</span>
+            <span>Copyright &copy; BugByte 2020</span>
           </div>
         </div>
       </footer>
@@ -374,8 +439,7 @@
 
 
     <!-- Add Project Modal -->
-  <!-- Modal -->
-<div class="modal fade" id="addProjectModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+  <div class="modal fade" id="addProjectModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header">
@@ -398,10 +462,30 @@
                   </div>
 
               </div>
-              
+
+            <!-- Row 2 Devs -->
+              <div class = "row mb-3">
+                
+                <label for="developers">Developers:</label>
+                <select class="form-control selectpicker" name="developers[]" id="developers" data-live-search="true" multiple>
+                <?php 
+
+                  foreach($users as $user):
+
+                  echo '<option value="'. $user['username']. '">'. $user['username'] . '</option>';
+
+                  endforeach;
+                ?>
+                </select>
+                
+
+                
+          
+
+              </div>
 
 
-              <!--ROW 2 Description-->
+              <!--ROW 3 Description-->
               <div class = "row mb-3">
             
                 <label for="description">Description:</label>
@@ -423,9 +507,19 @@
 
 
 
+
+
+
+
+
+
+
   <!-- Bootstrap core JavaScript-->
   <script src="vendor/jquery/jquery.min.js"></script>
   <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+  <!-- multiple select Javscript -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js"></script>
 
   <!-- Core plugin JavaScript-->
   <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
